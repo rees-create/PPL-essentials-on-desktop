@@ -140,7 +140,7 @@ def calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1)):
                 next_index = add(current_index, prop_dir)
                 if not(grid.in_memo(next_index) or grid.in_memo(adjacent)):
                     grid.memo.append(next_index)
-                    print(grid.memo)
+                    #print(grid.memo)
                     calcEqualityChains(grid, next_index, prop_dir)
                     #break
             #else:
@@ -149,8 +149,9 @@ def calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1)):
             for row in range(len(grid.grid)):
                 for col in range(len(grid.grid[0])):
                     index = (row, col)
-                    if not grid.in_memo(index): #and \
-                    #not(grid.grid[row][col] == grid.memo[len(grid.memo) - 1]):
+                    last_index = grid.memo[len(grid.memo) - 1]
+                    if not grid.in_memo(index) and \
+                    not(grid.grid[row][col] == grid.grid[last_index[0]][last_index[1]]):
                         calcEqualityChains(grid, index, prop_dir)
         
         #recurse
