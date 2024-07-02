@@ -2,7 +2,7 @@ class Grid:
     def __init__(self):
         self.grid = [
             ['M','L','P','M'],
-            ['L','L','P','M'],
+            ['P','P','P','M'],
             ['M','L','P','L'],
             ['M','L','P','L']
         ]
@@ -89,7 +89,7 @@ def calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1)):
         return
     
     #generate adjacent list for current index, add current index to memo
-    adjacent_list = findAdjacents(current_index, True)
+    adjacent_list = findAdjacents(current_index, False)
     if not grid.in_memo(current_index):
         grid.memo.append(current_index)
         
@@ -110,7 +110,7 @@ def calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1)):
         if grid.grid[adjacent[0]][adjacent[1]] == grid.grid[current_index[0]][current_index[1]]:
             #print(f'current index= {current_index}, propagation direction = {prop_dir}') #add new, recurse to next cell
              #collect equal adjacents
-            grid.memo.append(adjacent)
+            #grid.memo.append(adjacent)
             #print(grid.memo)
             equalAdjacents.append(adjacent)
             none_equal = False
@@ -139,7 +139,7 @@ def calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1)):
                 prop_dir = add(adjacent, neg(current_index))
                 next_index = add(current_index, prop_dir)
                 if not(grid.in_memo(next_index) or grid.in_memo(adjacent)):
-                    grid.memo.append(next_index)
+                    #grid.memo.append(next_index)
                     #print(grid.memo)
                     calcEqualityChains(grid, next_index, prop_dir)
                     #break
