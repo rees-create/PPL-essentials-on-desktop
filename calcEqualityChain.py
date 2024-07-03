@@ -63,37 +63,17 @@ def grid_size(arr):
             size += 1
     return size
 
-def untrap(adjacent, adjacent_list, grid, current_index, prop_dir, func):
-    next_index = add(current_index, prop_dir)
-    #invalid_possible_prop_index = True
-    #valid_used_adjacents = []
-    for adjacent in adjacent_list: #rotate until indices are valid
-        #next_index = add(current_index, prop_dir)
-        possible_prop_indices = [adjacent, current_index, next_index]
-        invalid_possible_prop_index = (True in [-1 in idx for idx in possible_prop_indices]) \
-                                      or (True in [len(grid.grid) in idx for idx in possible_prop_indices])
-        if not(invalid_possible_prop_index):
-            #valid_used_adjacents.append(adjacent)
-            if not(grid.in_memo(next_index) or grid.in_memo(adjacent)):   
-                prop_dir = add(adjacent, neg(current_index))
-                next_index = add(current_index, prop_dir)
-                grid.memo.append(next_index)
-                func(grid, next_index, prop_dir)
-                #break
-            else:
-                untrap(adjacent, adjacent_list, grid, current_index, prop_dir, func)
-        
 
 def calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1), diagonals = True):
     #if memo reaches grid size kill all recursive calls
     if grid_size(grid.grid) == len(grid.memo):
+        print(grid.memo)
         return
     
     #generate adjacent list for current index, add current index to memo
     adjacent_list = findAdjacents(current_index, diagonals)
     if not grid.in_memo(current_index):
         grid.memo.append(current_index)
-        
     
     #list for equal adjacents, bool indicator of no equal adjacents
     equalAdjacents = []
@@ -104,20 +84,12 @@ def calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1), diagonals 
         if (-1 in adjacent) or (-1 in current_index) or (len(grid.grid) in adjacent) \
           or (len(grid.grid) in current_index): #for uneven grid use of len(grid) doesn't suffice.
             continue
-        #if grid.in_memo(adjacent):
-        #    continue
 
         #check for equality
         if grid.grid[adjacent[0]][adjacent[1]] == grid.grid[current_index[0]][current_index[1]]:
-            #print(f'current index= {current_index}, propagation direction = {prop_dir}') #add new, recurse to next cell
-             #collect equal adjacents
-            #grid.memo.append(adjacent)
-            #print(grid.memo)
+            #collect equal adjacents
             equalAdjacents.append(adjacent)
-            none_equal = False
-            #calcEqualityChains(grid, start_index = adjacent, prop_dir = add(adjacent, neg(start_index)))
-            
-    
+            none_equal = False 
     
     #recursively visit non-memoized equal adjacents
     _else = 0 #Acting as an "else" for the loop, if it's equal to the loop length,
@@ -126,8 +98,7 @@ def calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1), diagonals 
         if grid.in_memo(eq_adjacent):
             _else += 1
             continue
-        print('smooth')
-        #none_equal = False
+        #smooth recursion
         calcEqualityChains(grid, eq_adjacent, prop_dir, diagonals)
     if _else == len(equalAdjacents):
         none_equal = True
@@ -135,25 +106,18 @@ def calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1), diagonals 
     #propagate to nearest cell recursively if no indices are found (if loop above doesn't run)
     if none_equal:
         next_index = add(current_index, prop_dir)
-        #invalid_possible_prop_index = True
         valid_used_adjacents = []
         for adjacent in adjacent_list: #rotate until indices are valid
-            #next_index = add(current_index, prop_dir)
             possible_prop_indices = [adjacent, current_index, next_index]
             invalid_possible_prop_index = (True in [-1 in idx for idx in possible_prop_indices]) \
                                           or (True in [len(grid.grid) in idx for idx in possible_prop_indices])
             if not(invalid_possible_prop_index):
-                #valid_used_adjacents.append(adjacent)   
+                #rotate   
                 prop_dir = add(adjacent, neg(current_index))
                 next_index = add(current_index, prop_dir)
-                #if not(grid.in_memo(next_index) or grid.in_memo(adjacent)):
-                #grid.memo.append(next_index)
-                #print(grid.memo)
-                print('rotate')
-                calcEqualityChains(grid, next_index, prop_dir, diagonals)
-                #break
-            #else:
-                #INTENTIONALLY look through grid for indices not in memo, recurse.
+                if not grid.in_memo(next_index):
+                    calcEqualityChains(grid, next_index, prop_dir, diagonals)
+        #INTENTIONALLY look through grid for indices not in memo, recurse.
         if grid_size(grid.grid) > len(grid.memo):
             for row in range(len(grid.grid)):
                 for col in range(len(grid.grid[0])):
@@ -161,19 +125,10 @@ def calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1), diagonals 
                     last_index = grid.memo[len(grid.memo) - 1]
                     if not grid.in_memo(index) and \
                     not(grid.grid[row][col] == grid.grid[last_index[0]][last_index[1]]):
-                        print('jumped')
+                        #jump
                         calcEqualityChains(grid, index, prop_dir, diagonals)
-        
-        #recurse
-        #if not (invalid_possible_prop_index):
-        #    calcEqualityChains(grid, next_index, prop_dir)
-        
-            
-    #calcEqualityChains(grid, start_index, prop_dir)
-            
-    
     
     
             
-calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1), diagonals = True)
+calcEqualityChains(grid, current_index = (4,2), prop_dir = (0,1), diagonals = True)
 print(grid.memo)
