@@ -1,10 +1,11 @@
 class Grid:
     def __init__(self):
         self.grid = [
-            ['M','L','P','M'],
-            ['P','P','P','M'],
-            ['P','M','P','M'],
-            ['M','M','P','L']
+            ['M','L','P','M','M'],
+            ['P','P','P','M','L'],
+            ['P','M','P','M','L'],
+            ['M','M','P','L','L'],
+            ['M','M','L','P','L']
         ]
         self.memo = []
     
@@ -123,8 +124,8 @@ def calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1), diagonals 
     #then the loop was skipped and none_equal should be True.
     for eq_adjacent in equalAdjacents:
         if grid.in_memo(eq_adjacent):
-            continue
             _else += 1
+            continue
         print('smooth')
         #none_equal = False
         calcEqualityChains(grid, eq_adjacent, prop_dir, diagonals)
@@ -174,5 +175,5 @@ def calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1), diagonals 
     
     
             
-calcEqualityChains(grid, diagonals = True)
+calcEqualityChains(grid, current_index = (0,0), prop_dir = (0,1), diagonals = True)
 print(grid.memo)
