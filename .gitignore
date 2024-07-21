@@ -5,5 +5,9 @@
 *.m4a
 *.wav
 *.ptx
+*.jpg
+*.png
+*.gif
+*.bmp
 #text files (there are too many of them saved here)
 *.txt
