@@ -1,6 +1,6 @@
 import math
 import matplotlib.pyplot as plt
-from scipy.interpolate import interp2d
+from scipy.interpolate import interp2d, interp1d
 import numpy as np
 
 
@@ -9,6 +9,10 @@ class Vector2:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+
+    def __init__(self, tup):
+        self.x = tup[0]
+        self.y = tup[1]
     
     def veclist(self, tup_list):
         vec_list = []
@@ -25,8 +29,29 @@ class Vector2:
     def __sub__(self, other):
         return (self.x - other.x, self.y - other.y)
     
+    def __truediv__(self, other):
+        return (self.x / other.x, self.y / other.y)
+    
+    def to_tup(self):
+        return (self.x, self.y)
+    
+    def remainders(self):
+        return Vector2(self.x % 1, self.y % 1)
+    
     def magnitude(self):
         pass
+
+class Blender:
+    def __init__(self, module, coords, start_percent, module_res, _9slice_res):
+        self.module = module
+        self.coords = coords
+        self.start_percent = start_percent
+        self.module_res = module_res
+        self._9slice_res = _9slice_res
+        # auto-calculated params
+        size = Vector2((start_percent * module_res.x) / 2, (start_percent * module_res.y) / 2)
+        self.discreteSize = size.remainders()
+        self.position = Vector2()
 
 def findAdjacents(index, diagonals = True):
     #vertical, diagonal, horizontal, negative diagonal
@@ -74,13 +99,19 @@ def ppl_heightmap(dimensions, nOctaves, wavelength, persistence, lacunarity, num
             
     return heightmap #let's not normalize for now; it's definitely something to consider though
 
-def weightInterpolation(heightmap, spline, res, start_percent, direction):
-    #first create filler linspace.. no! avoid this step! The spline should run through the already given heightmap
-    #instead, first create a coordinate grid variable and interpolation point grid variable
-    #z in interp2d should be the heights in the heightmap, x, and y are the coordinates
-    pass
+def weightInterpolation(terrainGrid, spline_type, _9slice_res, start_percent, direction):
+    for module in terrainGrid:
+        _9slice_size = (_9slice_res * 4 + 4, _9slice_res * 4 + 4)
+        #Remember, while on a module, it's the center of the intra-modular 9-slice.
+        #intra_modular_slice_coords = findAdjacents(module.moduleIndex) 
+        standard_slice = findAdjacents((0,0))
+        intra_modular_slice = [[[] for y in range(3)] for x in range(3)]
+        #unpack standard_slice into intra_modular_slice
+        for cell in standard_slice:
+            intra_modular_slice[cell[0]][cell[1]].append #append inter-modular 9-slice information (class object)
+                
     
-    #x_interp = np.linspace(np.min(grid, axis = 0), np.max(grid, axis = 0), len(grid) * res)
+   
 
     
 
