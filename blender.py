@@ -2,18 +2,59 @@ import math
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp2d, interp1d
 import numpy as np
+from functools import total_ordering
 
 
 #ya we codin' blender version paperplanedev up here... nah just the blending algorithm
+@total_ordering
 class Vector2:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-
-    def __init__(self, tup):
-        self.x = tup[0]
-        self.y = tup[1]
+    def __init__(self, *args):
+        if len(args) == 2:
+            self.x = args[0]
+            self.y = args[1]
+        elif len(args) == 1:
+            self.x = args[0][0]
+            self.y = args[0][1]
     
+    def __eq__(self, other):
+        return self.magnitude() == other.magnitude()
+    
+    def __lt__(self, other):
+        return self.magnitude() < other.magnitude()
+
+    def __call__(self, start, step):
+        """
+        :param Vector2 start: Where to start iterating from
+        :param int step: How much to step forward
+        """
+        self.current = Vector2(start)
+        self.step = step
+        return self
+    
+    def __iter__(self):
+        self.current = self.current - Vector2(1,1)
+        self._undiagonal_ = self.y - self.x
+        self._diagonal_moves_ = 1 + max(self.to_tup()) - int(math.fabs(self._undiagonal_ / self.step))
+
+        return self
+    
+    def __next__(self):
+        if self._diagonal_moves_ == 1 + max(self.to_tup()) - int(math.fabs(self._undiagonal_ / self.step)):
+            return self.current + Vector2(1,1)
+        
+        self._diagonal_moves_ -= 1
+
+        if self.current != self and self._diagonal_moves_ > 0:
+            self.current = self.current + Vector2(self.step, self.step)
+        elif self._diagonal_moves == 0:
+            undiagonal_switch = int(self._undiagonal_ / math.fabs(self._undiagonal_)) #avoiding if-elses at all cost 💀
+            undiagonal_switch /= 2
+            tup = (0,0)
+            tup[undiagonal_switch] = self.step
+            return self.current + Vector2(tup)
+        else:
+            raise StopIteration
+
     def veclist(self, tup_list):
         vec_list = []
         for tup in tup_list:
@@ -24,13 +65,22 @@ class Vector2:
         return str((self.x, self.y))
     
     def __add__(self, other):
-        return (self.x + other.x, self.y + other.y)
+        if isinstance(other, tuple):
+            return Vector2(self.x + other[0], self.y + other[1])
+        else:
+            return Vector2(self.x + other.x, self.y + other.y)
     
     def __sub__(self, other):
-        return (self.x - other.x, self.y - other.y)
+        if isinstance(other, tuple):
+            return Vector2(self.x - other[0], self.y - other[1])
+        else:
+            return Vector2(self.x - other.x, self.y - other.y)
     
     def __truediv__(self, other):
-        return (self.x / other.x, self.y / other.y)
+        if isinstance(other, tuple):
+            return Vector2(self.x / other[0], self.y / other[1])
+        else:
+            return Vector2(self.x / other.x, self.y / other.y)
     
     def to_tup(self):
         return (self.x, self.y)
@@ -39,9 +89,20 @@ class Vector2:
         return Vector2(self.x % 1, self.y % 1)
     
     def magnitude(self):
-        pass
+        return math.sqrt(self.x**2 + self.y**2)
+
+vec = Vector2(7,4)
+for v in vec((0,0), 1):
+    print(v) # make Vector2 comparable before this can work.
+    
 
 class Blender:
+    class Cell:
+        def __init__(self, grid, start_percent, module_res, coords, position, percentPosition):
+            size = Vector2((start_percent * module_res.x) / 2, (start_percent * module_res.y) / 2)
+            self.discreteSize = size - size.remainders()
+            self.coords = coords        
+    
     def __init__(self, module, coords, start_percent, module_res, _9slice_res):
         self.module = module
         self.coords = coords
@@ -49,8 +110,10 @@ class Blender:
         self.module_res = module_res
         self._9slice_res = _9slice_res
         # auto-calculated params
-        size = Vector2((start_percent * module_res.x) / 2, (start_percent * module_res.y) / 2)
-        self.discreteSize = size.remainders()
+        self.grid = []
+        #
+        #self.discreteSize = size - size.remainders()
+        
         self.position = Vector2()
 
 def findAdjacents(index, diagonals = True):
