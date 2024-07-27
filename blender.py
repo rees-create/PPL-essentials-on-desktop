@@ -33,26 +33,33 @@ class Vector2:
     
     def __iter__(self):
         self.current = self.current - Vector2(self.step, self.step)
-        self._diagonal_moves_ = self.step + max(self.to_tup()) - int(math.fabs((self.y - self.x) / self.step))
+        self._diagonal_moves_ = self.step + max(self.to_tup()) - int(np.absolute((self.y - self.x) / self.step))
 
-        if self.x > self.y:
-            self._straight_ = Vector2(self.step, 0)
-        elif self.y > self.x:
-            self._straight_ = Vector2(0, self.step)
+        x = np.abs(self.x)
+        y = np.abs(self.y)
+
+        self._diag_ = Vector2(-self.step, -self.step) if x < self.x else Vector2(self.step, self.step)
+
+        if x > y:
+            self._straight_ = Vector2(-self.step, 0) if x < self.x else Vector2(self.step, 0)
+            self._diag_ = Vector2(-self.step, self.step) if x < self.x else Vector2(self.step, self.step)
+        elif y > x:
+            self._straight_ = Vector2(0, -self.step) if y < self.y else Vector2(self.step, 0)
+            self._diag_ = Vector2(self.step, -self.step) if y < self.y else Vector2(self.step, self.step)
         else:
-            self._straight_ = Vector2(self.step, self.step)
+            self._straight_ = self._diag_ = (self.step, self.step) * (self / Vector2(x, y))
 
         return self
     
     def __next__(self):
-        if self._diagonal_moves_ == self.step + max(self.to_tup()) - int(math.fabs((self.y - self.x) / self.step)):
+        if self._diagonal_moves_ == self.step + max(self.to_tup()) - int(np.absolute((self.y - self.x) / self.step)):
             self.current = self.current #+ Vector2(self.step, self.step)
             #print(f'= ({self.current})')
         
         self._diagonal_moves_ -= 1
         
         if self._diagonal_moves_ >= 0:
-            self.current = self.current + Vector2(self.step, self.step)
+            self.current = self.current + self._diag_
             return self.current
         elif self.current < self - self._straight_:
             self.current = self.current + self._straight_
@@ -96,7 +103,7 @@ class Vector2:
     def magnitude(self):
         return math.sqrt(self.x**2 + self.y**2)
 
-vec = Vector2(-7,4)
+vec = Vector2(7,-4)
 for v in vec((0,0), 1):
     print(v) # make Vector2 comparable before this can work.
     
