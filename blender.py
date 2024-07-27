@@ -32,26 +32,31 @@ class Vector2:
         return self
     
     def __iter__(self):
-        self.current = self.current - Vector2(1,1)
-        self._undiagonal_ = self.y - self.x
-        self._diagonal_moves_ = 1 + max(self.to_tup()) - int(math.fabs(self._undiagonal_ / self.step))
+        self.current = self.current - Vector2(self.step, self.step)
+        self._diagonal_moves_ = self.step + max(self.to_tup()) - int(math.fabs((self.y - self.x) / self.step))
+
+        if self.x > self.y:
+            self._straight_ = Vector2(self.step, 0)
+        elif self.y > self.x:
+            self._straight_ = Vector2(0, self.step)
+        else:
+            self._straight_ = Vector2(self.step, self.step)
 
         return self
     
     def __next__(self):
-        if self._diagonal_moves_ == 1 + max(self.to_tup()) - int(math.fabs(self._undiagonal_ / self.step)):
-            return self.current + Vector2(1,1)
+        if self._diagonal_moves_ == self.step + max(self.to_tup()) - int(math.fabs((self.y - self.x) / self.step)):
+            self.current = self.current #+ Vector2(self.step, self.step)
+            #print(f'= ({self.current})')
         
         self._diagonal_moves_ -= 1
-
-        if self.current != self and self._diagonal_moves_ > 0:
+        
+        if self._diagonal_moves_ >= 0:
             self.current = self.current + Vector2(self.step, self.step)
-        elif self._diagonal_moves == 0:
-            undiagonal_switch = int(self._undiagonal_ / math.fabs(self._undiagonal_)) #avoiding if-elses at all cost 💀
-            undiagonal_switch /= 2
-            tup = (0,0)
-            tup[undiagonal_switch] = self.step
-            return self.current + Vector2(tup)
+            return self.current
+        elif self.current < self - self._straight_:
+            self.current = self.current + self._straight_
+            return self.current
         else:
             raise StopIteration
 
@@ -91,7 +96,7 @@ class Vector2:
     def magnitude(self):
         return math.sqrt(self.x**2 + self.y**2)
 
-vec = Vector2(7,4)
+vec = Vector2(-7,4)
 for v in vec((0,0), 1):
     print(v) # make Vector2 comparable before this can work.
     
