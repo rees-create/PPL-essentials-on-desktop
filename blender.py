@@ -38,16 +38,14 @@ class Vector2:
         x = np.abs(self.x)
         y = np.abs(self.y)
 
-        self._diag_ = Vector2(-self.step, -self.step) if x < self.x else Vector2(self.step, self.step)
+        self._diag_ = Vector2(self.step, self.step) * (self / Vector2(x, y)) #signed 1x1 vector 
 
         if x > y:
-            self._straight_ = Vector2(-self.step, 0) if x < self.x else Vector2(self.step, 0)
-            self._diag_ = Vector2(-self.step, self.step) if x < self.x else Vector2(self.step, self.step)
+            self._straight_ = Vector2(self.step, 0) * (self / Vector2(x, y))
         elif y > x:
-            self._straight_ = Vector2(0, -self.step) if y < self.y else Vector2(self.step, 0)
-            self._diag_ = Vector2(self.step, -self.step) if y < self.y else Vector2(self.step, self.step)
+            self._straight_ = Vector2(0, self.step) * (self / Vector2(x, y))
         else:
-            self._straight_ = self._diag_ = (self.step, self.step) * (self / Vector2(x, y))
+            self._straight_ = self._diag_
 
         return self
     
@@ -61,9 +59,9 @@ class Vector2:
         if self._diagonal_moves_ >= 0:
             self.current = self.current + self._diag_
             return self.current
-        elif self.current < self - self._straight_:
-            self.current = self.current + self._straight_
-            return self.current
+        #elif self.current < self - self._straight_:
+        #    self.current = self.current + self._straight_
+        #    return self.current
         else:
             raise StopIteration
 
@@ -87,6 +85,9 @@ class Vector2:
             return Vector2(self.x - other[0], self.y - other[1])
         else:
             return Vector2(self.x - other.x, self.y - other.y)
+
+    def __mul__(self, other):
+        return Vector2(self.x * other.x, self.y * other.y)
     
     def __truediv__(self, other):
         if isinstance(other, tuple):
