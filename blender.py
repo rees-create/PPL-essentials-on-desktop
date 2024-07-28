@@ -32,13 +32,20 @@ class Vector2:
         return self
     
     def __iter__(self):
-        self.current = self.current - Vector2(self.step, self.step)
-        self._diagonal_moves_ = self.step + max(self.to_tup()) - int(np.absolute((self.y - self.x) / self.step))
+        x = int(np.abs(self.x))
+        y = int(np.abs(self.y))
+        xd = int(np.abs(self.x - self.current.x))
+        yd = int(np.abs(self.y - self.current.y)) 
+        self._smallest_ = min(xd, yd) #smallest DIFFERENCE
+        smallest_idx = 0 if self._smallest_ == xd else 1
 
-        x = np.abs(self.x)
-        y = np.abs(self.y)
+        #self.current = self.current #- Vector2(self.step, self.step)
+        self._diagonal_moves_ = self._smallest_ #- self.current.to_tup()[smallest_idx]
+        print(self._diagonal_moves_)
 
         self._diag_ = Vector2(self.step, self.step) * (self / Vector2(x, y)) #signed 1x1 vector 
+        self.current = self.current - self._diag_ #set self.current back by 1
+        print(f'current: {self.current}')
 
         if x > y:
             self._straight_ = Vector2(self.step, 0) * (self / Vector2(x, y))
@@ -50,18 +57,18 @@ class Vector2:
         return self
     
     def __next__(self):
-        if self._diagonal_moves_ == self.step + max(self.to_tup()) - int(np.absolute((self.y - self.x) / self.step)):
-            self.current = self.current #+ Vector2(self.step, self.step)
-            #print(f'= ({self.current})')
+        #if self._diagonal_moves_ == self._smallest_:
+            #self.current = self.current + self._diag_
+            #print(f'= ({self.current})') 
         
-        self._diagonal_moves_ -= 1
         
         if self._diagonal_moves_ >= 0:
             self.current = self.current + self._diag_
+            self._diagonal_moves_ -= 1
             return self.current
-        #elif self.current < self - self._straight_:
-        #    self.current = self.current + self._straight_
-        #    return self.current
+        elif self.current < self - self._straight_:
+            self.current = self.current + self._straight_
+            return self.current
         else:
             raise StopIteration
 
@@ -104,7 +111,7 @@ class Vector2:
     def magnitude(self):
         return math.sqrt(self.x**2 + self.y**2)
 
-vec = Vector2(7,-4)
+vec = Vector2(-7,4)
 for v in vec((0,0), 1):
     print(v) # make Vector2 comparable before this can work.
     
