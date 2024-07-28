@@ -32,16 +32,17 @@ class Vector2:
         return self
     
     def __iter__(self):
-        x = int(np.abs(self.x))
-        y = int(np.abs(self.y))
+        x = int(np.abs(self.x)) if self.x != 0 else 1
+        y = int(np.abs(self.y)) if self.y != 0 else 1
         xd = int(np.abs(self.x - self.current.x))
         yd = int(np.abs(self.y - self.current.y)) 
         self._smallest_ = min(xd, yd) #smallest DIFFERENCE
+        self._biggest_ = max(xd, yd) #biggest DIFFERENCE
 
-        self._diagonal_moves_ = self._smallest_ 
+        self._diagonal_moves_ = self._smallest_
         
         self._diag_ = Vector2(self.step, self.step) * (self / Vector2(x, y)) #signed 1x1 vector 
-        self.current = self.current - self._diag_ #set self.current back by 1
+        self.current = self.current - self._diag_ #if self._smallest_ < self._biggest_ else self.current - self._diag_ * Vector2(2,2)
 
         if x > y:
             self._straight_ = Vector2(self.step, 0) * (self / Vector2(x, y))
@@ -53,10 +54,13 @@ class Vector2:
         return self
     
     def __next__(self):
-
+        if self._biggest_ == self._diagonal_moves_:
+            self._diagonal_moves_ -= 1
+        
         if self._diagonal_moves_ >= 0:
             self.current = self.current + self._diag_
             self._diagonal_moves_ -= 1
+            print(f'diagonal moves = {self._diagonal_moves_}')
             return self.current
         
         elif self.current < self - self._straight_:
@@ -105,8 +109,8 @@ class Vector2:
     def magnitude(self):
         return math.sqrt(self.x**2 + self.y**2)
 
-vec = Vector2(1,1)
-for v in vec((3,3), 1):
+vec = Vector2(3,3)
+for v in vec((0,0), 1):
     print(v) # make Vector2 comparable before this can work.
     
 
