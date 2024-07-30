@@ -28,79 +28,33 @@ class Vector2:
         :param int step: How much to step forward
         """
         self.current = Vector2(start)
-        self.step = step
+        self.step = int(np.abs(step))
         return self
     
     def __iter__(self):
-        x = int(np.abs(self.x)) if self.x != 0 else 1
-        y = int(np.abs(self.y)) if self.y != 0 else 1
-        xd = int(self.x - self.current.x)
-        xd = 1 if xd == 0 else xd
-
-        yd = int(self.y - self.current.y)
-        yd = 1 if yd == 0 else yd
-
-        uxd = int(np.abs(self.x - self.current.x)) 
-        uxd = 1 if uxd == 0 else uxd
-
-        uyd = int(np.abs(self.y - self.current.y))
-        uyd = 1 if uyd == 0 else uyd
-
-        self._umin_ = min(uxd, uyd) # (unsigned minimum) smallest unsigned DIFFERENCE
-        self._umax_ = max(uxd, uyd) # (unsigned maximum) biggest unsigned DIFFERENCE
-
-        #self._diagonal_moves_ = self._umin_
-        
-        self._diag_ = Vector2(self.step, self.step) * (Vector2(xd, yd) / Vector2(uxd, uyd)) 
-        #self.current = self.current 
-
-        #to avoid errors on length 1 iterations, use expression instead of {uxd, uyd}
-        if int(np.abs(self.x - self.current.x)) > int(np.abs(self.y - self.current.y)):
-            self._straight_ = Vector2(self.step, 0) * (Vector2(xd, yd) / Vector2(uxd, uyd))
-        elif int(np.abs(self.y - self.current.y)) > int(np.abs(self.x - self.current.x)):
-            self._straight_ = Vector2(0, self.step) * (Vector2(xd, yd) / Vector2(uxd, uyd))
-        else:
-            self._straight_ = self._diag_
-        
-        #destiny calculation (direction to destination vector), tracks overshoots on flip
-        straight_distance = self.current + self._straight_  - self
-        usdx = np.abs(straight_distance.x) if np.abs(straight_distance.x) > 0 else 1 #zero-guarded, unsigned straight_distance.x
-        usdy = np.abs(straight_distance.y) if np.abs(straight_distance.y) > 0 else 1
-        self._straight_destiny_ = straight_distance / Vector2(usdx, usdy) # 1-vector form of straight_distance
-
-        diagonal_distance = self.current + self._diag_ - self
-        uddx = np.abs(diagonal_distance.x) if np.abs(diagonal_distance.x) > 0 else 1
-        uddy = np.abs(diagonal_distance.y) if np.abs(diagonal_distance.y) > 0 else 1
-        self._diagonal_destiny_ = diagonal_distance / Vector2(uddx, uddy)
-
+        self._diff_ = self - self.current
+        self._started_ = False
         return self
     
     def __next__(self):
+       
+        if self._started_ == False:
+            self._started_ = True
+            return self.current
         
+        propagation = Vector2(0,0)
+        if self._diff_.x != 0:
+            propagation.x = -self.step if self._diff_.x + np.abs(self._diff_.x) == 0 else self.step
+        if self._diff_.y != 0:
+            propagation.y = -self.step if self._diff_.y + np.abs(self._diff_.y) == 0 else self.step
         
-        straight_distance = self.current + self._straight_  - self
-        usdx = np.abs(straight_distance.x) if np.abs(straight_distance.x) > 0 else 1 #zero-guarded, unsigned straight_distance.x
-        usdy = np.abs(straight_distance.y) if np.abs(straight_distance.y) > 0 else 1
-        straight_destiny = straight_distance / Vector2(usdx, usdy) # 1-vector form of straight_distance
+        self.current = self.current + propagation
+        self._diff_ = self._diff_ - propagation
 
-        diagonal_distance = self.current + self._diag_ - self
-        uddx = np.abs(diagonal_distance.x) if np.abs(diagonal_distance.x) > 0 else 1
-        uddy = np.abs(diagonal_distance.y) if np.abs(diagonal_distance.y) > 0 else 1
-        print(f"diagonal distance = {diagonal_distance}")
-        diagonal_destiny = diagonal_distance / Vector2(uddx, uddy)
-        #print(f'straight end? = {straight_distance != Vector2(0,0)} no overshoot? = {self._straight_ != straight_destiny}')
-        #print(f'straight distance = {straight_distance}, straight_destiny = {straight_destiny}, diagonal_destiny = {diagonal_destiny}')
-        if self._diagonal_destiny_ == diagonal_destiny: # \
-                                             #or self.current + self._diag_ != self:
-            self.current = self.current + self._diag_
-            return self.current
-        
-        elif self._straight_destiny_ == straight_destiny:
-            self.current = self.current + self._straight_
-            print(f'straight moves = {self._straight_}, diag = {self._diag_}')
-            return self.current
-        else:
+        if self._diff_ == Vector2(0, 0):
             raise StopIteration
+        
+        return self.current
 
     def veclist(self, tup_list):
         vec_list = []
@@ -141,8 +95,8 @@ class Vector2:
     def magnitude(self):
         return math.sqrt(self.x**2 + self.y**2)
 
-vec = Vector2(-2,0)
-for v in vec((0, 0), 1):
+vec = Vector2(0,0)
+for v in vec((6, 0), 1):
     print(v) # make Vector2 comparable before this can work.
     
 
