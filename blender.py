@@ -46,15 +46,13 @@ class Vector2:
         uyd = int(np.abs(self.y - self.current.y))
         uyd = 1 if uyd == 0 else uyd
 
-        
-
         self._umin_ = min(uxd, uyd) # (unsigned minimum) smallest unsigned DIFFERENCE
         self._umax_ = max(uxd, uyd) # (unsigned maximum) biggest unsigned DIFFERENCE
 
-        self._diagonal_moves_ = self._umin_
+        #self._diagonal_moves_ = self._umin_
         
         self._diag_ = Vector2(self.step, self.step) * (Vector2(xd, yd) / Vector2(uxd, uyd)) 
-        self.current = self.current - self._diag_ 
+        #self.current = self.current 
 
         #to avoid errors on length 1 iterations, use expression instead of {uxd, uyd}
         if int(np.abs(self.x - self.current.x)) > int(np.abs(self.y - self.current.y)):
@@ -78,8 +76,7 @@ class Vector2:
         return self
     
     def __next__(self):
-        if self._umax_ == self._diagonal_moves_:
-            self._diagonal_moves_ -= 1
+        
         
         straight_distance = self.current + self._straight_  - self
         usdx = np.abs(straight_distance.x) if np.abs(straight_distance.x) > 0 else 1 #zero-guarded, unsigned straight_distance.x
@@ -89,14 +86,13 @@ class Vector2:
         diagonal_distance = self.current + self._diag_ - self
         uddx = np.abs(diagonal_distance.x) if np.abs(diagonal_distance.x) > 0 else 1
         uddy = np.abs(diagonal_distance.y) if np.abs(diagonal_distance.y) > 0 else 1
+        print(f"diagonal distance = {diagonal_distance}")
         diagonal_destiny = diagonal_distance / Vector2(uddx, uddy)
         #print(f'straight end? = {straight_distance != Vector2(0,0)} no overshoot? = {self._straight_ != straight_destiny}')
         #print(f'straight distance = {straight_distance}, straight_destiny = {straight_destiny}, diagonal_destiny = {diagonal_destiny}')
-        diag_destiny_match = self._diagonal_destiny_ == diagonal_destiny
-        if (self._diagonal_moves_ > 0): # \
+        if self._diagonal_destiny_ == diagonal_destiny: # \
                                              #or self.current + self._diag_ != self:
             self.current = self.current + self._diag_
-            self._diagonal_moves_ -= 1
             return self.current
         
         elif self._straight_destiny_ == straight_destiny:
