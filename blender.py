@@ -92,18 +92,17 @@ class Vector2:
         diagonal_destiny = diagonal_distance / Vector2(uddx, uddy)
         #print(f'straight end? = {straight_distance != Vector2(0,0)} no overshoot? = {self._straight_ != straight_destiny}')
         #print(f'straight distance = {straight_distance}, straight_destiny = {straight_destiny}, diagonal_destiny = {diagonal_destiny}')
-        if (self._diagonal_moves_ >= 0) and self._diagonal_destiny_ == diagonal_destiny: # \
+        diag_destiny_match = self._diagonal_destiny_ == diagonal_destiny
+        if (self._diagonal_moves_ > 0): # \
                                              #or self.current + self._diag_ != self:
             self.current = self.current + self._diag_
             self._diagonal_moves_ -= 1
             return self.current
         
-        elif straight_distance != Vector2(0,0) and self._straight_destiny_ == straight_destiny: #\
-                                                            #self.current + self._straight_ != self:
+        elif self._straight_destiny_ == straight_destiny:
             self.current = self.current + self._straight_
-            #print(f'straight moves = {self._straight_}, diag = {self._diag_}')
+            print(f'straight moves = {self._straight_}, diag = {self._diag_}')
             return self.current
-        
         else:
             raise StopIteration
 
