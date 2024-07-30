@@ -22,7 +22,7 @@ class Vector2:
     def __lt__(self, other):
         return self.magnitude() < other.magnitude()
 
-    def __call__(self, start, step):
+    def __call__(self, start, step = 1):
         """
         :param Vector2 start: Where to start iterating from
         :param int step: How much to step forward
@@ -51,7 +51,11 @@ class Vector2:
         self.current = self.current + propagation
         self._diff_ = self._diff_ - propagation
 
-        if self._diff_ == Vector2(0, 0):
+        if self._diff_ == Vector2(0, 0): 
+            # susceptible to infinite loops if step is uneven (addition of step doesn't exactly equal _diff_ 
+            # at some point). To prevent this, create a destiny (direction to destination) variable on both sides, 
+            # terminate on case where original + updated destinies = Vector2(0,0). However, blender might not
+            # have to use uneven step. Just worth noting 
             raise StopIteration
         
         return self.current
@@ -96,16 +100,19 @@ class Vector2:
         return math.sqrt(self.x**2 + self.y**2)
 
 vec = Vector2(0,0)
-for v in vec((6, 0), 1):
+for v in vec((6, 0), step = 1):
     print(v) # make Vector2 comparable before this can work.
     
 
 class Blender:
     class Cell:
-        def __init__(self, grid, start_percent, module_res, coords, position, percentPosition):
+        def __init__(self, grid, start_percent, module_res, coords):
             size = Vector2((start_percent * module_res.x) / 2, (start_percent * module_res.y) / 2)
-            self.discreteSize = size - size.remainders()
-            self.coords = coords        
+            rem = super.add_remainder(size.remainders())
+            self.discreteSize = size - rem
+            self.coords = coords
+            self.position = sum([grid[cell.y][cell.x].discreteSize for cell in Vector2(0,0)(coords.to_tup())])
+            self.percentPosition = self.position / module_res      
     
     def __init__(self, module, coords, start_percent, module_res, _9slice_res):
         self.module = module
@@ -115,10 +122,17 @@ class Blender:
         self._9slice_res = _9slice_res
         # auto-calculated params
         self.grid = []
+        self.remainders = 0
         #
-        #self.discreteSize = size - size.remainders()
-        
+        #self.discreteSize = size - size.remainders()    
         self.position = Vector2()
+
+    def add_remainder(self, remainder):
+        self.remainders += remainder
+        if self.remainders >= 1:
+            self.remainders -= 1
+            return 1
+        return 0
 
 def findAdjacents(index, diagonals = True):
     #vertical, diagonal, horizontal, negative diagonal
@@ -175,8 +189,8 @@ def weightInterpolation(terrainGrid, spline_type, _9slice_res, start_percent, di
         intra_modular_slice = [[[] for y in range(3)] for x in range(3)]
         #unpack standard_slice into intra_modular_slice
         for cell in standard_slice:
-            intra_modular_slice[cell[0]][cell[1]].append #append inter-modular 9-slice information (class object)
-                
+            intra_modular_slice[cell[1]][cell[0]].append #append inter-modular 9-slice information (class object)
+                    
     
    
 
