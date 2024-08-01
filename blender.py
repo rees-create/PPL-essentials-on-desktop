@@ -113,16 +113,21 @@ class Blender:
             self.coords = coords
             self.position = sum([blender.grid[cell.y][cell.x].discreteSize for cell in Vector2(0,0)(coords.to_tup())])
             self.percentPosition = self.position / module_res
-
-        def setBlendPoint(self, blendPoint):
-            pass      
+            
     
-    def __init__(self, coords, start_percent, module_res, _9slice_res, interpolation_type = "linear"):
+    def __init__(self, coords, start_percent, module_res, _9slice_res, spline_points, interpolation_type = "linear"):
         self.coords = coords
         self.start_percent = start_percent
         self.module_res = module_res
         self._9slice_res = _9slice_res
         self.interpolation_type = interpolation_type
+        # force len of spline points to be correct
+        while len(spline_points) < _9slice_res * 2:
+            spline_points.append(0.0) 
+        while len(spline_points) > _9slice_res * 2:
+            spline_points.pop()
+
+        self.spline_points = spline_points
         # auto-calculated params
         _9slice_size = (_9slice_res * 2 + 1, _9slice_res * 2 + 1)
         # to get x and y *coordinates*, subtract _9slice_res + 1 from *indices* x and y.
@@ -142,6 +147,9 @@ class Blender:
             self.remainders -= 1
             return 1
         return 0
+    
+    def splinify(self):
+        pass
 
 def findAdjacents(index, diagonals = True):
     #vertical, diagonal, horizontal, negative diagonal
