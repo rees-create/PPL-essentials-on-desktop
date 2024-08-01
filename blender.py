@@ -106,26 +106,35 @@ for v in vec((6, 0), step = 1):
 
 class Blender:
     class Cell:
-        def __init__(self, grid, start_percent, module_res, coords):
+        def __init__(self, blender, start_percent, module_res, coords):
             size = Vector2((start_percent * module_res.x) / 2, (start_percent * module_res.y) / 2)
-            rem = super.add_remainder(size.remainders())
+            rem = blender.add_remainder(size.remainders())
             self.discreteSize = size - rem
             self.coords = coords
-            self.position = sum([grid[cell.y][cell.x].discreteSize for cell in Vector2(0,0)(coords.to_tup())])
-            self.percentPosition = self.position / module_res      
+            self.position = sum([blender.grid[cell.y][cell.x].discreteSize for cell in Vector2(0,0)(coords.to_tup())])
+            self.percentPosition = self.position / module_res
+
+        def setBlendPoint(self, blendPoint):
+            pass      
     
-    def __init__(self, module, coords, start_percent, module_res, _9slice_res):
-        self.module = module
+    def __init__(self, coords, start_percent, module_res, _9slice_res, interpolation_type = "linear"):
         self.coords = coords
         self.start_percent = start_percent
         self.module_res = module_res
         self._9slice_res = _9slice_res
+        self.interpolation_type = interpolation_type
         # auto-calculated params
-        self.grid = []
+        _9slice_size = (_9slice_res * 2 + 1, _9slice_res * 2 + 1)
+        # to get x and y *coordinates*, subtract _9slice_res + 1 from *indices* x and y.
+        center_grid = [[self.Cell(self, start_percent, module_res, Vector2(x - _9slice_res - 1, y - _9slice_res - 1)) 
+                                for y in range(_9slice_size[1])] for x in range(_9slice_size[0])]
+        #this is just the inter-modular 9-slice tho, you have to make the intra-modular one using findAdjacents
+        adjacents = findAdjacents(0,0)
+        adjacent_grids = [[[self.Cell(self, start_percent, module_res, Vector2(x + adj[0] - _9slice_res - 1, y + adj[1] - _9slice_res - 1)) 
+                                for y in range(_9slice_size[1])] for x in range(_9slice_size[0])] for adj in adjacents]
+        adjacent_grids.append(center_grid)
+        self.grid = adjacent_grids
         self.remainders = 0
-        #
-        #self.discreteSize = size - size.remainders()    
-        self.position = Vector2()
 
     def add_remainder(self, remainder):
         self.remainders += remainder
@@ -182,16 +191,13 @@ def ppl_heightmap(dimensions, nOctaves, wavelength, persistence, lacunarity, num
 
 def weightInterpolation(terrainGrid, spline_type, _9slice_res, start_percent, direction):
     for module in terrainGrid:
-        _9slice_size = (_9slice_res * 4 + 4, _9slice_res * 4 + 4)
+        
         #Remember, while on a module, it's the center of the intra-modular 9-slice.
-        #intra_modular_slice_coords = findAdjacents(module.moduleIndex) 
-        standard_slice = findAdjacents((0,0))
-        intra_modular_slice = [[[] for y in range(3)] for x in range(3)]
-        #unpack standard_slice into intra_modular_slice
-        for cell in standard_slice:
-            intra_modular_slice[cell[1]][cell[0]].append #append inter-modular 9-slice information (class object)
-                    
-    
+        coords_list = [module.coords.x, module.coords.y]
+        invalid_module = 0 in coords_list or terrainGrid.dimens in coords_list
+        if not invalid_module:
+            module.blender = Blender(module.coords, start_percent, module.resolution, _9slice_res)
+
    
 
     
