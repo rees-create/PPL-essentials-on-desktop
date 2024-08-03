@@ -135,6 +135,8 @@ class Blender:
                                 for y in range(_9slice_size[1])] for x in range(_9slice_size[0])]
         #this is just the inter-modular 9-slice tho, you have to make the intra-modular one using findAdjacents
         adjacents = findAdjacents(0,0)
+        #adjacents = np.array([Vector2(adjacent[0], adjacent[1]) for adjacent in adjacents]) * (2 * _9slice_res + 1)
+        
         adjacent_grids = [[[self.Cell(self, start_percent, module_res, Vector2(x + adj[0] - _9slice_res - 1, y + adj[1] - _9slice_res - 1)) 
                                 for y in range(_9slice_size[1])] for x in range(_9slice_size[0])] for adj in adjacents]
         adjacent_grids.append(center_grid)
@@ -149,7 +151,13 @@ class Blender:
         return 0
     
     def splinify(self):
-        pass
+        centers = np.array(findAdjacents(0,0)) * (2 * self._9slice_res + 1)
+        centers = np.array([Vector2(center[0], center[1]) for center in centers])
+        for center in centers:
+            for index, coords in enumerate(center((0,0))):
+                #first coordinate is adjacent index (cyclic position..)
+                self.grid[index][coords.y % self._9slice_res][coords.x % self._9slice_res] 
+                
 
 def findAdjacents(index, diagonals = True):
     #vertical, diagonal, horizontal, negative diagonal
