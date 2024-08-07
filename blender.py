@@ -22,7 +22,7 @@ class Vector2:
     def __lt__(self, other):
         return self.magnitude() < other.magnitude()
 
-    def __call__(self, start, step = 1):
+    def __call__(self, *start, step = 1):
         """
         :param Vector2 start: Where to start iterating from
         :param int step: How much to step forward
@@ -113,6 +113,7 @@ class Blender:
             self.coords = coords
             self.position = sum([blender.grid[cell.y][cell.x].discreteSize for cell in Vector2(0,0)(coords.to_tup())])
             self.percentPosition = self.position / module_res
+            self.spline_point = None
             
     
     def __init__(self, coords, start_percent, module_res, _9slice_res, spline_points, interpolation_type = "linear"):
@@ -131,16 +132,16 @@ class Blender:
         # auto-calculated params
         _9slice_size = (_9slice_res * 2 + 1, _9slice_res * 2 + 1)
         # to get x and y *coordinates*, subtract _9slice_res + 1 from *indices* x and y.
-        center_grid = [[self.Cell(self, start_percent, module_res, Vector2(x - _9slice_res - 1, y - _9slice_res - 1)) 
+        self.center = Vector2(self._9slice_res, self._9slice_res)
+        self.center_grid = [[self.Cell(self, start_percent, module_res, Vector2(x - _9slice_res - 1, y - _9slice_res - 1)) 
                                 for y in range(_9slice_size[1])] for x in range(_9slice_size[0])]
         #this is just the inter-modular 9-slice tho, you have to make the intra-modular one using findAdjacents
-        adjacents = findAdjacents(0,0)
-        #adjacents = np.array([Vector2(adjacent[0], adjacent[1]) for adjacent in adjacents]) * (2 * _9slice_res + 1)
+        self.adjacents = findAdjacents(0,0)
+        self.adjacents = np.array([Vector2(adjacent) for adjacent in self.adjacents]) * (2 * _9slice_res + 1)
         
-        adjacent_grids = [[[self.Cell(self, start_percent, module_res, Vector2(x + adj[0] - _9slice_res - 1, y + adj[1] - _9slice_res - 1)) 
-                                for y in range(_9slice_size[1])] for x in range(_9slice_size[0])] for adj in adjacents]
-        adjacent_grids.append(center_grid)
-        self.grid = adjacent_grids
+        self.adjacent_grids = [[[self.Cell(self, start_percent, module_res, Vector2(x + adj[0] - _9slice_res - 1, y + adj[1] - _9slice_res - 1)) 
+                                for y in range(_9slice_size[1])] for x in range(_9slice_size[0])] for adj in self.adjacents]
+        
         self.remainders = 0
 
     def add_remainder(self, remainder):
@@ -150,14 +151,22 @@ class Blender:
             return 1
         return 0
     
-    def splinify(self):
-        centers = np.array(findAdjacents(0,0)) * (2 * self._9slice_res + 1)
-        centers = np.array([Vector2(center[0], center[1]) for center in centers])
-        for center in centers:
-            for index, coords in enumerate(center((0,0))):
-                #first coordinate is adjacent index (cyclic position..)
-                self.grid[index][coords.y % self._9slice_res][coords.x % self._9slice_res] 
-                
+    def set_spline_points(self):
+        # set adjacents, iterate up the center grid, then the adjacent grid
+        # setting adjacents
+        adjacents = np.array(findAdjacents((0,0))) * self._9slice_res #the plus 1 to iterate to the end
+        adjacents = [Vector2(adj) for adj in adjacents]
+        # iterating up center grid
+        for center_edge in adjacents:
+            for index, center_cell in enumerate(center_edge(0,0)):
+                if center_cell != Vector2(0,0):
+                    self.center_grid[center_cell.y][center_cell.x].spline_point = self.spline_points[index]
+        # iterating up adjacent grid
+        for adjacent_edge in range(len(adjacents)):
+            center_facing_edge = Vector2(adjacents[(adjacent_edge + 4) % 8]) #find opposite adjacent
+            for index, adjacent_cell in enumerate(adjacents[adjacent_edge](center_facing_edge.to_tup())):
+                self.adjacent_grid[index][adjacent_cell.y][adjacent_cell.x].spline_point = self.spline_points[index + 2]
+        # bad code alert: you're iterating a vector, so index will be the vector iteration step, not cyclic step
 
 def findAdjacents(index, diagonals = True):
     #vertical, diagonal, horizontal, negative diagonal
