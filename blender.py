@@ -22,12 +22,12 @@ class Vector2:
     def __lt__(self, other):
         return self.magnitude() < other.magnitude()
 
-    def __call__(self, *start, step = 1):
+    def __call__(self, start, step = 1):
         """
         :param Vector2 start: Where to start iterating from
         :param int step: How much to step forward
         """
-        self.current = Vector2(start)
+        self.current = start if isinstance(start, Vector2) else Vector2(start)
         self.step = int(np.abs(step))
         return self
     
@@ -37,10 +37,16 @@ class Vector2:
         return self
     
     def __next__(self):
-       
         if self._started_ == False:
             self._started_ = True
             return self.current
+        
+        if self._diff_ == Vector2(0, 0): 
+            # susceptible to infinite loops if step is uneven (addition of step doesn't exactly equal _diff_ 
+            # at some point). To prevent this, create a destiny (direction to destination) variable on both sides, 
+            # terminate on case where original + updated destinies = Vector2(0,0). However, blender might not
+            # have to use uneven step. Just worth noting 
+            raise StopIteration
         
         propagation = Vector2(0,0)
         if self._diff_.x != 0:
@@ -50,13 +56,6 @@ class Vector2:
         
         self.current = self.current + propagation
         self._diff_ = self._diff_ - propagation
-
-        if self._diff_ == Vector2(0, 0): 
-            # susceptible to infinite loops if step is uneven (addition of step doesn't exactly equal _diff_ 
-            # at some point). To prevent this, create a destiny (direction to destination) variable on both sides, 
-            # terminate on case where original + updated destinies = Vector2(0,0). However, blender might not
-            # have to use uneven step. Just worth noting 
-            raise StopIteration
         
         return self.current
 
@@ -111,12 +110,13 @@ class Blender:
             rem = blender.add_remainder(size.remainders())
             self.discreteSize = size - rem
             self.coords = coords
-            self.position = sum([blender.grid[cell.y][cell.x].discreteSize for cell in Vector2(0,0)(coords.to_tup())])
+            self.position = sum([blender.center_grid[cell.y][cell.x].discreteSize for cell in Vector2(0,0)(coords.to_tup())])
             self.percentPosition = self.position / module_res
             self.spline_point = None
             
     
     def __init__(self, coords, start_percent, module_res, _9slice_res, spline_points, interpolation_type = "linear"):
+        self.remainders = Vector2(0, 0)
         self.coords = coords
         self.start_percent = start_percent
         self.module_res = module_res
@@ -129,6 +129,7 @@ class Blender:
             spline_points.pop()
 
         self.spline_points = spline_points
+        
         # auto-calculated params
         _9slice_size = (_9slice_res * 2 + 1, _9slice_res * 2 + 1)
         # to get x and y *coordinates*, subtract _9slice_res + 1 from *indices* x and y.
@@ -142,31 +143,43 @@ class Blender:
         self.adjacent_grids = [[[self.Cell(self, start_percent, module_res, Vector2(x + adj[0] - _9slice_res - 1, y + adj[1] - _9slice_res - 1)) 
                                 for y in range(_9slice_size[1])] for x in range(_9slice_size[0])] for adj in self.adjacents]
         
-        self.remainders = 0
+        
 
     def add_remainder(self, remainder):
         self.remainders += remainder
-        if self.remainders >= 1:
-            self.remainders -= 1
-            return 1
-        return 0
+        remain_vec = Vector2(0,0)
+        if self.remainders.x >= 1:
+            self.remainders.x -= 1
+            remain_vec.x = 1
+        if self.remainders.y >= 1:
+            self.remainders.y -=1
+            remain_vec.y = 1
+        return remain_vec
     
     def set_spline_points(self):
         # set adjacents, iterate up the center grid, then the adjacent grid
         # setting adjacents
         adjacents = np.array(findAdjacents((0,0))) * self._9slice_res #the plus 1 to iterate to the end
         adjacents = [Vector2(adj) for adj in adjacents]
-        # iterating up center grid
-        for center_edge in adjacents:
-            for index, center_cell in enumerate(center_edge(0,0)):
-                if center_cell != Vector2(0,0):
-                    self.center_grid[center_cell.y][center_cell.x].spline_point = self.spline_points[index]
-        # iterating up adjacent grid
-        for adjacent_edge in range(len(adjacents)):
-            center_facing_edge = Vector2(adjacents[(adjacent_edge + 4) % 8]) #find opposite adjacent
-            for index, adjacent_cell in enumerate(adjacents[adjacent_edge](center_facing_edge.to_tup())):
-                self.adjacent_grid[index][adjacent_cell.y][adjacent_cell.x].spline_point = self.spline_points[index + 2]
-        # bad code alert: you're iterating a vector, so index will be the vector iteration step, not cyclic step
+        
+        #iterate to edge, add perimeter cells at center
+        center_spline_points = []
+        for i in range(9):
+            center = Vector2(0,0) if i == 0 else adjacents[i - 1] * 3
+            for adjacent in adjacents:
+                local_adjacent = adjacent + center
+                for path_cell in local_adjacent(center):
+                    center_spline_points.append(path_cell)
+                    for backward in center(path_cell):
+                        perimeter_cells = (path_cell - Vector2(backward.x, center), path_cell - Vector2(center, backward.y)) 
+                        center_spline_points.append(perimeter_cells)
+        #locate next cells
+        self.spline_points = center_spline_points
+        #transform direction, iterate to destination, adding perimeter
+
+bl = Blender(Vector2(0,0), 15, Vector2(64, 64), 2, [0.8, 0.6, 0.65, 0.75])
+bl.set_spline_points()
+print(bl.spline_points())        
 
 def findAdjacents(index, diagonals = True):
     #vertical, diagonal, horizontal, negative diagonal
@@ -177,6 +190,7 @@ def findAdjacents(index, diagonals = True):
         idx_pos = (i, i+len(directions)) if i // 2 % 2 == 0 else (i+len(directions), i)
         adjacent_indices[idx_pos[0]] = index - directions[i]
         adjacent_indices[idx_pos[1]] = index + directions[i]
+    
     return adjacent_indices
 
 def DirectionalXY(x, y, numDirections, waveIndex):
