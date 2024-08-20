@@ -6,6 +6,7 @@ from functools import total_ordering
 
 
 #ya we codin' blender version paperplanedev up here... nah just the blending algorithm
+
 @total_ordering
 class Vector2:
     def __init__(self, *args):
@@ -59,7 +60,7 @@ class Vector2:
         
         return self.current
 
-    def veclist(self, tup_list):
+    def veclist(tup_list):
         vec_list = []
         for tup in tup_list:
             vec_list.append(Vector2(tup[0], tup[1]))
@@ -101,7 +102,20 @@ class Vector2:
 vec = Vector2(0,0)
 for v in vec((6, 0), step = 1):
     print(v) # make Vector2 comparable before this can work.
+
+def findAdjacents(index, diagonals = True):
+    #vertical, diagonal, horizontal, negative diagonal
+    index = Vector2(index)
+    directions = Vector2.veclist([(1,0), (1,-1), (0,1), (1,1)]) if diagonals else Vector2.veclist([(1,0), (0,1)])
+    adjacent_indices = [(0,0) for i in range(2 * len(directions))]
     
+    for i in range(len(directions)):
+        idx_pos = (i, i+len(directions)) if i // 2 % 2 == 0 else (i+len(directions), i)
+        adjacent_indices[idx_pos[0]] = index - directions[i]
+        adjacent_indices[idx_pos[1]] = index + directions[i]
+    
+    return adjacent_indices
+
 
 class Blender:
     class Cell:
@@ -110,7 +124,7 @@ class Blender:
             rem = blender.add_remainder(size.remainders())
             self.discreteSize = size - rem
             self.coords = coords
-            self.position = sum([blender.center_grid[cell.y][cell.x].discreteSize for cell in Vector2(0,0)(coords.to_tup())])
+            self.position = Vector2(0, 0)#sum([blender.center_grid[cell.y][cell.x].discreteSize for cell in Vector2(0,0)(coords.to_tup())])
             self.percentPosition = self.position / module_res
             self.spline_point = None
             
@@ -131,17 +145,22 @@ class Blender:
         self.spline_points = spline_points
         
         # auto-calculated params
-        _9slice_size = (_9slice_res * 2 + 1, _9slice_res * 2 + 1)
+        _9slice_size = _9slice_res * 2 + 1
         # to get x and y *coordinates*, subtract _9slice_res + 1 from *indices* x and y.
         self.center = Vector2(self._9slice_res, self._9slice_res)
         self.center_grid = [[self.Cell(self, start_percent, module_res, Vector2(x - _9slice_res - 1, y - _9slice_res - 1)) 
-                                for y in range(_9slice_size[1])] for x in range(_9slice_size[0])]
+                                for x in range(_9slice_size)] for y in range(_9slice_size)]
+        for y in range(_9slice_size):
+            for x in range(_9slice_size):
+                size_list = [self.center_grid[cell.y][cell.x].discreteSize for cell in Vector2(0,0)(coords.to_tup())]
+                for _size in size_list:
+                    self.center_grid[y][x].position += _size
         #this is just the inter-modular 9-slice tho, you have to make the intra-modular one using findAdjacents
-        self.adjacents = findAdjacents(0,0)
-        self.adjacents = np.array([Vector2(adjacent) for adjacent in self.adjacents]) * (2 * _9slice_res + 1)
+        self.adjacents = findAdjacents((0,0))
+        self.adjacents = np.array([adjacent for adjacent in self.adjacents]) * Vector2(2 * _9slice_res + 1, 2 * _9slice_res + 1)
         
-        self.adjacent_grids = [[[self.Cell(self, start_percent, module_res, Vector2(x + adj[0] - _9slice_res - 1, y + adj[1] - _9slice_res - 1)) 
-                                for y in range(_9slice_size[1])] for x in range(_9slice_size[0])] for adj in self.adjacents]
+        self.adjacent_grids = [[[self.Cell(self, start_percent, module_res, Vector2(x + adj.x - _9slice_res - 1, y + adj.y - _9slice_res - 1)) 
+                                for x in range(_9slice_size)] for y in range(_9slice_size)] for adj in self.adjacents]
         
         
 
@@ -159,19 +178,18 @@ class Blender:
     def set_spline_points(self):
         # set adjacents, iterate up the center grid, then the adjacent grid
         # setting adjacents
-        adjacents = np.array(findAdjacents((0,0))) * self._9slice_res #the plus 1 to iterate to the end
-        adjacents = [Vector2(adj) for adj in adjacents]
+        adjacents = np.array(findAdjacents((0,0))) * Vector2(self._9slice_res, self._9slice_res) #the plus 1 to iterate to the end
         
         #iterate to edge, add perimeter cells at center
         center_spline_points = []
         for i in range(9):
-            center = Vector2(0,0) if i == 0 else adjacents[i - 1] * 3
+            center = Vector2(0,0) if i == 0 else adjacents[i - 1] * Vector2(3,3)
             for adjacent in adjacents:
                 local_adjacent = adjacent + center
                 for path_cell in local_adjacent(center):
                     center_spline_points.append(path_cell)
                     for backward in center(path_cell):
-                        perimeter_cells = (path_cell - Vector2(backward.x, center), path_cell - Vector2(center, backward.y)) 
+                        perimeter_cells = (path_cell - Vector2(backward.x, center.x), path_cell - Vector2(center.y, backward.y)) 
                         center_spline_points.append(perimeter_cells)
         #locate next cells
         self.spline_points = center_spline_points
@@ -179,19 +197,9 @@ class Blender:
 
 bl = Blender(Vector2(0,0), 15, Vector2(64, 64), 2, [0.8, 0.6, 0.65, 0.75])
 bl.set_spline_points()
-print(bl.spline_points())        
+print(bl.spline_points)        
 
-def findAdjacents(index, diagonals = True):
-    #vertical, diagonal, horizontal, negative diagonal
-    directions = Vector2.veclist([(1,0), (1,-1), (0,1), (1,1)]) if diagonals else Vector2.veclist([(1,0), (0,1)])
-    adjacent_indices = [(0,0) for i in range(2 * len(directions))]
-    
-    for i in range(len(directions)):
-        idx_pos = (i, i+len(directions)) if i // 2 % 2 == 0 else (i+len(directions), i)
-        adjacent_indices[idx_pos[0]] = index - directions[i]
-        adjacent_indices[idx_pos[1]] = index + directions[i]
-    
-    return adjacent_indices
+
 
 def DirectionalXY(x, y, numDirections, waveIndex):
     axis = (waveIndex * math.pi) / numDirections
