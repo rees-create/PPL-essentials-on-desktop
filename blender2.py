@@ -1,5 +1,6 @@
 import numpy as np
 import math
+from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
 
 XSize = 4
@@ -84,13 +85,14 @@ ax = fig.add_subplot(projection = '3d')
 #make data
 dimensions = (512, 512)
 nOctaves = 4
-wavelength = 2
+wavelength = 0.23
 persistence = 0.17
 lacunarity = 3.14
 numWaves = 4
-x = np.array(range(dimensions[0]) )/dimensions[0]
+x = np.array(range(dimensions[0]))/dimensions[0]
 y = np.array(range(dimensions[1]))/dimensions[1]
+X, Y = np.meshgrid(x,y)
 #z = np.array([0 for i in range(dimensions[1])])
-z = np.array(ppl_heightmap(dimensions, nOctaves, wavelength, persistence, lacunarity, numWaves)).T
-ax.plot_surface(x, y, z)
+z = np.array(ppl_heightmap(dimensions, nOctaves, wavelength, persistence, lacunarity, numWaves))
+ax.plot_surface(X, Y, z)
 plt.show()
