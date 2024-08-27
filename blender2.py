@@ -3,8 +3,8 @@ import math
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
 
-XSize = 512
-ZSize = 512
+XSize = 1024
+ZSize = 1024
 class Module:
     def __init__(self, nOctaves, wavelength, persistence, lacunarity, numWaves) -> None:
         #self.dimensions = dimensions
@@ -16,11 +16,11 @@ class Module:
 
 dimensions = (512, 512)
 
-module = Module(    
+module1 = Module(    
     #dimensions = (128, 128),
     nOctaves = 4,
     wavelength = 0.23,
-    persistence = 0.17,
+    persistence = 0.08,
     lacunarity = 3.14,
     numWaves = 4
 )
@@ -28,9 +28,9 @@ module = Module(
 module2 = Module(    
     #dimensions = (128, 128),
     nOctaves = 4,
-    wavelength = 3,
-    persistence = 0.08,
-    lacunarity = 1.14,
+    wavelength = 0.43,
+    persistence = 0.015,
+    lacunarity = 5.9,
     numWaves = 4
 )
 
@@ -46,7 +46,7 @@ def Index1Dto2D(index, n_cols):
     row = index // n_cols
     return (col, row)
 
-def SetHeightmapPartition(partitionDimensions, module):
+def SetHeightmapPartition(partitionDimensions, moduleGrid):
     terrainHeightmap = [[0 for x in range(XSize)] for z in range(ZSize)]
     partitionX, partitionY = partitionDimensions
 
@@ -59,6 +59,8 @@ def SetHeightmapPartition(partitionDimensions, module):
         
         XStep = XSize // partitionX
         ZStep = ZSize // partitionY
+        moduleX, moduleY = Index1Dto2D(gridIndex1D, partitionX)
+        module = moduleGrid[moduleX][moduleY]
         moduleHeightmap = ppl_heightmap(
             (XStep, ZStep),
             module.nOctaves,
@@ -118,16 +120,18 @@ y = np.linspace(0, 1, ZSize)#np.array(range(ZSize))/module.dimensions[1]
 X, Y = np.meshgrid(x,y)
 #z = np.array([0 for i in range(dimensions[1])])
 terrainGrid = [
-    [module, module, module2, module],
-    [module, module2, module2, module2],
-    [module, module, module2, module],
-    [module, module2, module2, module2]
+    [module1, module1, module2, module1],
+    [module1, module2, module2, module2],
+    [module1, module1, module2, module1],
+    [module1, module2, module2, module2]
 ]
 
 #z = np.array([[0 for _x in range(dimensions[0])] for _y in range(dimensions[1])])
 partitionDimensions = (len(terrainGrid), len(terrainGrid[0]))
-z = SetHeightmapPartition(partitionDimensions, module)
+z = SetHeightmapPartition(partitionDimensions, terrainGrid)
 z = np.array(z)
 
 ax.plot_surface(X, Y, z)
+ax.set_aspect('equal')
+
 plt.show()
