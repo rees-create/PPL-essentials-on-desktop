@@ -192,7 +192,7 @@ class BlendDivider:
 
         return blendWallsX, blendWallsZ
     
-    def blended_point(self, start_divider, end_divider, interpolation_mode, t):
+    def blended_point(self, start_divider, next_divider, points, interpolation_mode, t):
         if t < 0 or t > 1:
             return ValueError('t should be between 0 and 1')
         interpolation_modes = ['quadratic', 'cubic', 'sigmoid', 'linear']
@@ -203,8 +203,10 @@ class BlendDivider:
         mode = interpolation_modes.index(interpolation_mode)
         erp = interpolation_functions[mode]
 
-        local = start_divider.position * (1 - start_divider.weight) 
-        other = end_divider * dividerX.weight 
+        weight = erp(start_divider.weight, next_divider.weight)
+        local = points[0] * (1 - weight) 
+        other = points[1] * weight 
+        return (local + other) / 2
 
 blendWallsX, blendWallsZ = BlendDivider.createBlendTable(blendLinesX, blendLinesZ)
 for _y in ZSize: #I'm done with the Unity convention at this point
@@ -215,14 +217,15 @@ for _y in ZSize: #I'm done with the Unity convention at this point
         for blendWallX, blendWallY in zip(blendWallsX, blendWallsZ): 
             # Yeah, the Unity convention is no longer in use here to keep the code readable.
         
-            for divider in blendWallX:
-                diff = _x - math.floor(divider.position) #interpolant
+            for divider_idx in range(len(blendWallX)):
+                diff = _x - math.floor(blendWallX[divider_idx].position) #interpolant
                 if diff > 0:
-                    index = divider.zero_index
-                    weight = divider.weight
+                    index = blendWallX[divider_idx].zero_index
+                    weight = blendWallY[divider_idx].weight
                     break
             break
-        heightmap_val = heightmap_val * (1 - weight) + terrainGrid[index + 1].single_point((_x,_y))
+        points = (heightmap_val * (1 - weight), terrainGrid[index + 1].single_point((_x,_y)))
+        
 
 
 print(f'dividerX = {dividerX}')
