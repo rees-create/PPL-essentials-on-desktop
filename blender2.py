@@ -174,9 +174,9 @@ class BlendDivider:
     def __repr__(self):
         return f'<BlendDivider> (position: {self.position}, weight: {self.weight}, zero_index: {self.zero_index})'
     def createBlendTable(blendLinesX, blendLinesZ):
-        fullbDX, fullbDY = fullInterpDividers
+        fullbDX, fullbDZ = fullInterpDividers
         x_list = [zip(blendLineX, fullbDX, range(len(fullbDX))) for blendLineX in blendLinesX]
-        z_list = [zip(blendLineZ, fullbDY, range(len(fullbDY))) for blendLineZ in blendLinesZ]
+        z_list = [zip(blendLineZ, fullbDZ, range(len(fullbDZ))) for blendLineZ in blendLinesZ]
         blendWallsX = []
         blendWallsZ = []
         for wall_x, wall_z in zip(x_list, z_list):
@@ -198,7 +198,8 @@ class BlendDivider:
         interpolation_modes = ['quadratic', 'cubic', 'sigmoid', 'linear']
         interpolation_functions = [lambda start, end: start + (end - start) * (t**2),
                                    lambda start, end: start + (end - start) * (t**3),
-                                   lambda start, end: start + (end - start) * (1/(1 - np.exp(t)))] #this will break, get a normalized shifted function
+                                   lambda start, end: start + (end - start) * (1/(1 - np.exp(t))), #this will break, get a normalized shifted function
+                                   lambda start, end: start + (end - start) * t]
         
         mode = interpolation_modes.index(interpolation_mode)
         erp = interpolation_functions[mode]
@@ -211,20 +212,34 @@ class BlendDivider:
 blendWallsX, blendWallsZ = BlendDivider.createBlendTable(blendLinesX, blendLinesZ)
 for _y in ZSize: #I'm done with the Unity convention at this point
     for _x in XSize:
-        heightmap_val = z[_y][_x]
-        index = 0
-        weight = 0
+        #heightmap_val = z[_y][_x]
+        
+        current_dividersX = [None]
+        current_dividersY = [None]
+        index = (_x // biomesDimens[0], _y // biomesDimens[1])
+        
         for blendWallX, blendWallY in zip(blendWallsX, blendWallsZ): 
             # Yeah, the Unity convention is no longer in use here to keep the code readable.
         
             for divider_idx in range(len(blendWallX)):
                 diff = _x - math.floor(blendWallX[divider_idx].position) #interpolant
                 if diff > 0:
-                    index = blendWallX[divider_idx].zero_index
-                    weight = blendWallY[divider_idx].weight
+                    current_dividersX = [blendWallX[divider_idx], blendWallX[divider_idx + 1]]
+                    current_dividersY = [blendWallY[divider_idx], blendWallY[divider_idx + 1]]
                     break
             break
-        points = (heightmap_val * (1 - weight), terrainGrid[index + 1].single_point((_x,_y)))
+        points_x, points_y = (), ()
+        fullbDX, fullbDY = fullInterpDividers
+        if current_dividersX[0] != None:
+            overlayer_x = current_dividersX[0].zero_index > len(fullbDX) // 2 #basically meaning blending crosses
+            points_x = (terrainGrid[index[0] + 1][index[1]].single_point((_x,_y)), 
+                        terrainGrid[index[0]][index[1] + 1].single_point((_x,_y))
+                        )
+            
+        if current_dividersY[0] != None:
+            points_y = (terrainGrid[index[0] + 1][index[1]].single_point((_x,_y)), 
+                        terrainGrid[index[0] + 1][index[1]].single_point((_x,_y))
+                        )
         
 
 
