@@ -192,7 +192,7 @@ class BlendDivider:
 
         return blendWallsX, blendWallsZ
     
-    def blended_point(self, start_divider, next_divider, points, interpolation_mode, t):
+    def blended_point(start_divider, next_divider, points, interpolation_mode, t):
         if t < 0 or t > 1:
             return ValueError('t should be between 0 and 1')
         interpolation_modes = ['quadratic', 'cubic', 'sigmoid', 'linear']
@@ -213,36 +213,58 @@ blendWallsX, blendWallsZ = BlendDivider.createBlendTable(blendLinesX, blendLines
 for _y in ZSize: #I'm done with the Unity convention at this point
     for _x in XSize:
         #heightmap_val = z[_y][_x]
-        
-        current_dividersX = [None]
-        current_dividersY = [None]
         index = (_x // biomesDimens[0], _y // biomesDimens[1])
-        
+        diffX, diffY = 0, 0
+        x_div_index = 0
+        y_div_index = 0
+        blend_wall_x, blend_wall_y = [], []
         for blendWallX, blendWallY in zip(blendWallsX, blendWallsZ): 
             # Yeah, the Unity convention is no longer in use here to keep the code readable.
-        
-            for divider_idx in range(len(blendWallX)):
-                diff = _x - math.floor(blendWallX[divider_idx].position) #interpolant
-                if diff > 0:
-                    current_dividersX = [blendWallX[divider_idx], blendWallX[divider_idx + 1]]
-                    current_dividersY = [blendWallY[divider_idx], blendWallY[divider_idx + 1]]
+            done_x, done_y = False, False
+            x_div_index, y_div_index = 0, 0
+
+            for divider_x in blendWallX:
+                if not _x > divider_x.position:
+                    done_x = True
+                    blend_wall_x = blendWallX
                     break
-            break
+                diffX = _x - math.floor(divider_x.position) #interpolant
+                if not done_x:
+                    x_div_index += 1
+            
+            for divider_y in blendWallY:
+                if not _y > divider_y.position:
+                    done_y = True
+                    blend_wall_y = blendWallY
+                    break
+                diffY = _y - math.floor(divider_y.position)
+                if not done_y:
+                    y_div_index += 1
+            
+            if done_x and done_y:
+                break
+        
         points_x, points_y = (), ()
         fullbDX, fullbDY = fullInterpDividers
-        if current_dividersX[0] != None:
-            overlayer_x = current_dividersX[0].zero_index > len(fullbDX) // 2 #basically meaning blending crosses
-            points_x = (terrainGrid[index[0] + 1][index[1]].single_point((_x,_y)), 
-                        terrainGrid[index[0]][index[1] + 1].single_point((_x,_y))
+        blendedPoints = np.array([])
+        if blend_wall_x[0] != None:
+            lastX, lastY = int(blend_wall_x[-1].position), int(blend_wall_y[-1].position)
+            points_x = (terrainGrid[index[0]][index[1]].single_point((_x,_y)), 
+                        terrainGrid[index[0]][index[1] + 1].single_point((_x - lastX, _y - lastY))
                         )
+            blendedPoint = BlendDivider.blended_point(blend_wall_x[x_div_index], blend_wall_x[x_div_index + 1], points_x, 'linear', diffX)
+            blendedPoints.append(blendedPoint)
+        if blend_wall_y[0] != None:
+            lastX, lastY = int(blend_wall_x[-1].position), int(blend_wall_y[-1].position)
+            points_y = (terrainGrid[index[0]][index[1]].single_point((_x,_y)), 
+                        terrainGrid[index[0] + 1][index[1]].single_point((_x - lastX ,_y - lastY))
+                        )
+            blendedPoint = BlendDivider.blended_point(blend_wall_y[y_div_index], blend_wall_y[y_div_index + 1], points_y, 'linear', diffY)
+            blendedPoints.append(blendedPoint)
             
-        if current_dividersY[0] != None:
-            points_y = (terrainGrid[index[0] + 1][index[1]].single_point((_x,_y)), 
-                        terrainGrid[index[0] + 1][index[1]].single_point((_x,_y))
-                        )
+        z[_x,_y] = np.mean(blendedPoints)
         
-
-
+        
 print(f'dividerX = {dividerX}')
 print(f'blendLinesX = {blendLinesX}')
 #print(blendTable)
