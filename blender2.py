@@ -230,7 +230,7 @@ for _y in range(ZSize): #I'm done with the Unity convention at this point
         diffX, diffY = 0, 0
         x_div_index = 0
         y_div_index = 0
-        blend_wall_x, blend_wall_y = [], []
+        blend_wall_x, blend_wall_y = [None], [None]
         #print(f'-------point (x = {_x}, y = {_y})------')
         for blendWallX, blendWallY in zip(blendWallsX, blendWallsZ): 
             # Yeah, the Unity convention is no longer in use here to keep the code readable.
@@ -240,23 +240,26 @@ for _y in range(ZSize): #I'm done with the Unity convention at this point
             for divider_x in blendWallX:
                 #print(f'divider_x = {divider_x}')
                 divider_dist = math.ceil(blendWallX[1].position - blendWallX[0].position)
-                if not _x > divider_x.position: # if _x is behind divider ⚠️this is killing everything
-                    #print(f'chose divider_x as {divider_x}\n')
+                overshoot = _x > blendWallX[-1].position
+                
+                if (not _x > divider_x.position) or overshoot: # if _x is behind divider ⚠️this is killing everything
+                    print(f'chose divider_x as {divider_x}\n')
                     done_x = True #mark _x as done
                     blend_wall_x = blendWallX # set this blendWall as main blendWall
                     break
                 
                 diffX = (_x - divider_x.position) / divider_dist #interpolant
-                print(f'x = {_x}, divider pos = {divider_x.position}, divider = {divider_x}')
+                #print(f'x = {_x}, divider pos = {divider_x.position}, divider = {divider_x}')
                 if not done_x:
                     x_div_index += 1 # store divider index
                     #print(f'leaving {divider_x} for next divider\n')
 
             for divider_y in blendWallY:
                 #print(f'divider_y = {divider_y}')
+                overshoot = _y > blendWallY[-1].position
                 divider_dist = math.ceil(blendWallY[1].position - blendWallY[0].position)
-                if not _y > divider_y.position: #⚠️this is killing everything
-                    #print(f'chose divider_y = {divider_y}\n')
+                if (not _y > divider_y.position) or overshoot: #⚠️this is killing everything
+                    print(f'chose divider_y = {divider_y}\n')
                     done_y = True
                     blend_wall_y = blendWallY
                     break
@@ -280,6 +283,7 @@ for _y in range(ZSize): #I'm done with the Unity convention at this point
                         terrainGrid[index[0]][nextmod].single_point((_x - lastX, _y - lastY))
                         )
             blendedPoint = BlendDivider.blended_point(blend_wall_x[x_div_index], blend_wall_x[nextdiv], points_x, 'linear', diffX)
+            print(f'blended y = {blendedPoint}')
             blendedPoints.append(blendedPoint)
         if blend_wall_y[0] != None:
             lastX, lastY = int(blend_wall_x[-1].position), int(blend_wall_y[-1].position)
@@ -289,9 +293,11 @@ for _y in range(ZSize): #I'm done with the Unity convention at this point
                         terrainGrid[nextmod][index[1]].single_point((_x - lastX ,_y - lastY))
                         )
             blendedPoint = BlendDivider.blended_point(blend_wall_y[y_div_index], blend_wall_y[nextdiv], points_y, 'linear', diffY)
+            print(f'blended y = {blendedPoint}')
             blendedPoints.append(blendedPoint)
             
         blendedPoints = np.array(blendedPoints)
+        #print(blendedPoints)
         if len(blendedPoints) != 0:
             print(f"blend diff = {np.mean(blendedPoints) - z[_y][_x]}")
             z[_y,_x] = np.mean(blendedPoints)
