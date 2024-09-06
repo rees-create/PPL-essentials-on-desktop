@@ -3,8 +3,8 @@ import math
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
 
-XSize = 32
-ZSize = 32 #in normal situations (including matplotlib) this should by YSize, but Z is used just for 
+XSize = 64
+ZSize = 64 #in normal situations (including matplotlib) this should by YSize, but Z is used just for 
              #Unity 3D space conventions. Don't get confused by this
 class Module:
     def __init__(self, nOctaves, wavelength, persistence, lacunarity, numWaves) -> None:
@@ -239,26 +239,30 @@ for _y in range(ZSize): #I'm done with the Unity convention at this point
 
             for divider_x in blendWallX:
                 #print(f'divider_x = {divider_x}')
-                if not _x > divider_x.position: # if _x is behind divider
+                divider_dist = math.ceil(blendWallX[1].position - blendWallX[0].position)
+                if not _x > divider_x.position: # if _x is behind divider ⚠️this is killing everything
                     #print(f'chose divider_x as {divider_x}\n')
                     done_x = True #mark _x as done
                     blend_wall_x = blendWallX # set this blendWall as main blendWall
                     break
-                divider_dist = blendWallX[0].position - blendWallX[1].position
-                diffX = (_x - math.floor(divider_x.position)) / divider_dist #interpolant
+                
+                diffX = (_x - divider_x.position) / divider_dist #interpolant
+                print(f'x = {_x}, divider pos = {divider_x.position}, divider = {divider_x}')
                 if not done_x:
                     x_div_index += 1 # store divider index
                     #print(f'leaving {divider_x} for next divider\n')
 
             for divider_y in blendWallY:
                 #print(f'divider_y = {divider_y}')
-                if not _y > divider_y.position:
+                divider_dist = math.ceil(blendWallY[1].position - blendWallY[0].position)
+                if not _y > divider_y.position: #⚠️this is killing everything
                     #print(f'chose divider_y = {divider_y}\n')
                     done_y = True
                     blend_wall_y = blendWallY
                     break
-                divider_dist = blendWallY[0].position - blendWallY[1].position
-                diffY = (_y - math.floor(divider_y.position)) / divider_dist
+                
+                diffY = (_y - divider_y.position) / divider_dist
+                #print(diffY)
                 if not done_y:
                     y_div_index += 1
                     #print(f'leaving {divider_y} for next divider\n')
