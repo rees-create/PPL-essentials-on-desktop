@@ -3,8 +3,8 @@ import math
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
 
-XSize = 1024
-ZSize = 1024 #in normal situations (including matplotlib) this should by YSize, but Z is used just for 
+XSize = 32
+ZSize = 32 #in normal situations (including matplotlib) this should by YSize, but Z is used just for 
              #Unity 3D space conventions. Don't get confused by this
 class Module:
     def __init__(self, nOctaves, wavelength, persistence, lacunarity, numWaves) -> None:
@@ -94,8 +94,11 @@ def SetHeightmapPartition(partitionDimensions, moduleGrid):
 
 
 def ppl_heightmap(dimensions, nOctaves, wavelength, persistence, lacunarity, numWaves, single_point = False):
+    heightmap = []
+    pv = 0
     if not single_point:
         heightmap = [[0 for y in range(dimensions[1])] for x in range(dimensions[0])]
+        del pv
 
     for z in range(dimensions[1]):
         for x in range(dimensions[0]):
@@ -118,14 +121,18 @@ def ppl_heightmap(dimensions, nOctaves, wavelength, persistence, lacunarity, num
                     wave = math.sin(parameter)
                     octave = alpha * wave
                     ensembleValue += octave
-                    if single_point:
-                        break
+
                 pointValue += ensembleValue
-                if single_point:
-                    return pointValue
-            heightmap[z][x] = pointValue
-            
-    return heightmap #let's not normalize for now; it's definitely something to consider though
+
+            if single_point:
+                pv = pointValue
+            else: 
+                heightmap[z][x] = pointValue
+    
+    if not single_point:       
+        return heightmap #let's not normalize for now; it's definitely something to consider though
+    else:
+        return pv
 
 #plotting
 #initialize graph
@@ -153,7 +160,7 @@ z = np.array(z)
 # [REMINDER]: in normal situations (including matplotlib) the Zs in blending should be Ys, but Z is used just for 
 # Unity 3D space conventions. Don't get confused by this
 thiccness_ratio = 4
-weightDividers = ([0.2, 0.4], [0.5, 0.8])
+weightDividers = ([0.5, 0.75], [0.5, 0.75])
 fullInterpDividers = ([0] + weightDividers[0] + [1], [0] + weightDividers[1] + [1]) 
 nDividersX, nDividersZ = (len(weightDividers[0]) + 2, len(weightDividers[1]) + 2) # remember that outer default dividers 0 and 1 will be added 
 
@@ -194,7 +201,7 @@ class BlendDivider:
     
     def blended_point(start_divider, next_divider, points, interpolation_mode, t):
         if t < 0 or t > 1:
-            return ValueError('t should be between 0 and 1')
+            raise ValueError('t should be between 0 and 1')
         interpolation_modes = ['quadratic', 'cubic', 'sigmoid', 'linear']
         interpolation_functions = [lambda start, end: start + (end - start) * (t**2),
                                    lambda start, end: start + (end - start) * (t**3),
@@ -210,63 +217,86 @@ class BlendDivider:
         return (local + other) / 2
 
 blendWallsX, blendWallsZ = BlendDivider.createBlendTable(blendLinesX, blendLinesZ)
-for _y in ZSize: #I'm done with the Unity convention at this point
-    for _x in XSize:
+kill = 0
+for _y in range(ZSize): #I'm done with the Unity convention at this point
+    if kill == 1600:
+        break
+    for _x in range(XSize):
+        kill +=1
+        if kill == 1600:
+            break
         #heightmap_val = z[_y][_x]
-        index = (_x // biomesDimens[0], _y // biomesDimens[1])
+        index = (math.floor(_x // divIntervalX), math.floor(_y // divIntervalZ))
         diffX, diffY = 0, 0
         x_div_index = 0
         y_div_index = 0
         blend_wall_x, blend_wall_y = [], []
+        #print(f'-------point (x = {_x}, y = {_y})------')
         for blendWallX, blendWallY in zip(blendWallsX, blendWallsZ): 
             # Yeah, the Unity convention is no longer in use here to keep the code readable.
             done_x, done_y = False, False
             x_div_index, y_div_index = 0, 0
 
             for divider_x in blendWallX:
-                if not _x > divider_x.position:
-                    done_x = True
-                    blend_wall_x = blendWallX
+                #print(f'divider_x = {divider_x}')
+                if not _x > divider_x.position: # if _x is behind divider
+                    #print(f'chose divider_x as {divider_x}\n')
+                    done_x = True #mark _x as done
+                    blend_wall_x = blendWallX # set this blendWall as main blendWall
                     break
-                diffX = _x - math.floor(divider_x.position) #interpolant
+                divider_dist = blendWallX[0].position - blendWallX[1].position
+                diffX = (_x - math.floor(divider_x.position)) / divider_dist #interpolant
                 if not done_x:
-                    x_div_index += 1
-            
+                    x_div_index += 1 # store divider index
+                    #print(f'leaving {divider_x} for next divider\n')
+
             for divider_y in blendWallY:
+                #print(f'divider_y = {divider_y}')
                 if not _y > divider_y.position:
+                    #print(f'chose divider_y = {divider_y}\n')
                     done_y = True
                     blend_wall_y = blendWallY
                     break
-                diffY = _y - math.floor(divider_y.position)
+                divider_dist = blendWallY[0].position - blendWallY[1].position
+                diffY = (_y - math.floor(divider_y.position)) / divider_dist
                 if not done_y:
                     y_div_index += 1
-            
+                    #print(f'leaving {divider_y} for next divider\n')
             if done_x and done_y:
                 break
         
         points_x, points_y = (), ()
         fullbDX, fullbDY = fullInterpDividers
-        blendedPoints = np.array([])
+        blendedPoints = []
         if blend_wall_x[0] != None:
             lastX, lastY = int(blend_wall_x[-1].position), int(blend_wall_y[-1].position)
+            nextmod = index[1] + 1 if index[1] < bDX - 1 else index[1]
+            nextdiv = x_div_index + 1 if x_div_index < bDX - 1 else x_div_index 
             points_x = (terrainGrid[index[0]][index[1]].single_point((_x,_y)), 
-                        terrainGrid[index[0]][index[1] + 1].single_point((_x - lastX, _y - lastY))
+                        terrainGrid[index[0]][nextmod].single_point((_x - lastX, _y - lastY))
                         )
-            blendedPoint = BlendDivider.blended_point(blend_wall_x[x_div_index], blend_wall_x[x_div_index + 1], points_x, 'linear', diffX)
+            blendedPoint = BlendDivider.blended_point(blend_wall_x[x_div_index], blend_wall_x[nextdiv], points_x, 'linear', diffX)
             blendedPoints.append(blendedPoint)
         if blend_wall_y[0] != None:
             lastX, lastY = int(blend_wall_x[-1].position), int(blend_wall_y[-1].position)
+            nextmod = index[0] + 1 if index[0] < bDZ - 1 else index[0]
+            nextdiv = y_div_index + 1 if y_div_index < bDZ - 1 else y_div_index 
             points_y = (terrainGrid[index[0]][index[1]].single_point((_x,_y)), 
-                        terrainGrid[index[0] + 1][index[1]].single_point((_x - lastX ,_y - lastY))
+                        terrainGrid[nextmod][index[1]].single_point((_x - lastX ,_y - lastY))
                         )
-            blendedPoint = BlendDivider.blended_point(blend_wall_y[y_div_index], blend_wall_y[y_div_index + 1], points_y, 'linear', diffY)
+            blendedPoint = BlendDivider.blended_point(blend_wall_y[y_div_index], blend_wall_y[nextdiv], points_y, 'linear', diffY)
             blendedPoints.append(blendedPoint)
             
-        z[_x,_y] = np.mean(blendedPoints)
+        blendedPoints = np.array(blendedPoints)
+        if len(blendedPoints) != 0:
+            print(f"blend diff = {np.mean(blendedPoints) - z[_y][_x]}")
+            z[_y,_x] = np.mean(blendedPoints)
+
+            
         
         
-print(f'dividerX = {dividerX}')
-print(f'blendLinesX = {blendLinesX}')
+#print(f'dividerX = {dividerX}')
+#print(f'blendLinesX = {blendLinesX}')
 #print(blendTable)
 
 ax.plot_surface(X, Y, z)
