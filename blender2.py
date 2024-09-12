@@ -159,6 +159,8 @@ z = np.array(z)
 #blend here
 # [REMINDER]: in normal situations (including matplotlib) the Zs in blending should be Ys, but Z is used just for 
 # Unity 3D space conventions. Don't get confused by this
+
+#add these vars to BlendDivider class
 thiccness_ratio = 3
 weightDividers = ([0.2, 0.9], [0.5, 0.8])
 fullInterpDividers = ([0] + weightDividers[0] + [1], [0] + weightDividers[1] + [1]) 
@@ -169,7 +171,7 @@ bDX, bDZ = biomesDimens
 divIntervalX, divIntervalZ = XSize / bDX, ZSize / bDZ
 thiccnessX, thiccnessZ = (divIntervalX / thiccness_ratio, divIntervalZ / thiccness_ratio)
 dividerX, dividerZ = ([XSize / bDX * i for i in range(1, bDX + 1)], [ZSize / bDZ * i for i in range(1, bDZ + 1)])
-
+#put this in a function?
 blendLinesX = np.array([line for line in np.linspace(np.array(dividerX) - thiccnessX, np.array(dividerX) + thiccnessX, nDividersX)]).T
 blendLinesZ = np.array([line for line in np.linspace(np.array(dividerZ) - thiccnessZ, np.array(dividerZ) + thiccnessZ, nDividersZ)]).T
 
@@ -230,15 +232,15 @@ blendWallsX, blendWallsZ = BlendDivider.createBlendTable(blendLinesX, blendLines
 
 for _y in range(ZSize): #I'm done with the Unity convention at this point
     for _x in range(XSize):
-        index = (math.floor(_x // divIntervalX), math.floor(_y // divIntervalZ))
         diffX, diffY = 0, 0
         x_div_index = 0
         y_div_index = 0
         blend_wall_x, blend_wall_y = [None], [None]
-        
+        #blend wall assignment
         for blendWallX, blendWallY in zip(blendWallsX, blendWallsZ): 
             done_x, done_y = False, False
             x_div_index, y_div_index = 0, 0
+            #optimize this, create function
             for divider_x in blendWallX:
                 divider_dist = math.ceil(blendWallX[1].position - blendWallX[0].position)
                 overshoot = _x > blendWallX[-1].position
@@ -267,9 +269,9 @@ for _y in range(ZSize): #I'm done with the Unity convention at this point
             if done_x and done_y:
                 break
         
-        points_x, points_y = (), ()
-        fullbDX, fullbDY = fullInterpDividers
+        index = (math.floor(_x // divIntervalX), math.floor(_y // divIntervalZ))
         blendedPoints = []
+        #create function for this
         if blend_wall_x[0] != None:
             lastX, lastY = int(blend_wall_x[-1].position), int(blend_wall_y[-1].position)
             nextmod = index[1] + 1 if index[1] < bDX - 1 else index[1]
@@ -278,8 +280,8 @@ for _y in range(ZSize): #I'm done with the Unity convention at this point
                         terrainGrid[index[0]][nextmod].single_point((_x - lastX, _y - lastY))
                         )
             blendedPoint = BlendDivider.blended_point(blend_wall_x[x_div_index], blend_wall_x[nextdiv], points_x, 'cubic', diffX)
-            
             blendedPoints.append(blendedPoint)
+
         if blend_wall_y[0] != None:
             lastX, lastY = int(blend_wall_x[-1].position), int(blend_wall_y[-1].position)
             nextmod = index[0] + 1 if index[0] < bDZ - 1 else index[0]
