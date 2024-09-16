@@ -181,6 +181,17 @@ def different_signs(num1, num2):
     is_neg1 = ab1 > num1 
     is_neg2 = ab2 > num2
     return is_neg1 != is_neg2
+
+def blend_points(blend_wall_x, blend_wall_y, div_index):
+    if blend_wall_x[0] != None:
+        lastX, lastY = int(blend_wall_x[-1].position), int(blend_wall_y[-1].position)
+        nextmod = index[1] + 1 if index[1] < bDX - 1 else index[1]
+        nextdiv = div_index + 1 if div_index < bDX - 1 else div_index 
+        points_x = (terrainGrid[index[0]][index[1]].single_point((_x,_y)), 
+                    terrainGrid[index[0]][nextmod].single_point((_x - lastX, _y - lastY))
+                    )
+        blendedPoint = BlendDivider.blended_point(blend_wall_x[div_index], blend_wall_x[nextdiv], points_x, 'cubic', diffX)
+        blendedPoints.append(blendedPoint)
     
 class BlendDivider:
     def __init__(self, position, weight, zero_index):
@@ -240,7 +251,7 @@ for _y in range(ZSize): #I'm done with the Unity convention at this point
         for blendWallX, blendWallY in zip(blendWallsX, blendWallsZ): 
             done_x, done_y = False, False
             x_div_index, y_div_index = 0, 0
-            #optimize this, create function
+            #TODO: optimize this, create function
             for divider_x in blendWallX:
                 divider_dist = math.ceil(blendWallX[1].position - blendWallX[0].position)
                 overshoot = _x > blendWallX[-1].position
@@ -271,26 +282,28 @@ for _y in range(ZSize): #I'm done with the Unity convention at this point
         
         index = (math.floor(_x // divIntervalX), math.floor(_y // divIntervalZ))
         blendedPoints = []
-        #create function for this
-        if blend_wall_x[0] != None:
-            lastX, lastY = int(blend_wall_x[-1].position), int(blend_wall_y[-1].position)
-            nextmod = index[1] + 1 if index[1] < bDX - 1 else index[1]
-            nextdiv = x_div_index + 1 if x_div_index < bDX - 1 else x_div_index 
-            points_x = (terrainGrid[index[0]][index[1]].single_point((_x,_y)), 
-                        terrainGrid[index[0]][nextmod].single_point((_x - lastX, _y - lastY))
-                        )
-            blendedPoint = BlendDivider.blended_point(blend_wall_x[x_div_index], blend_wall_x[nextdiv], points_x, 'cubic', diffX)
-            blendedPoints.append(blendedPoint)
+        #TODO: create function for these if statements
+        # if blend_wall_x[0] != None:
+        #     lastX, lastY = int(blend_wall_x[-1].position), int(blend_wall_y[-1].position)
+        #     nextmod = index[1] + 1 if index[1] < bDX - 1 else index[1]
+        #     nextdiv = x_div_index + 1 if x_div_index < bDX - 1 else x_div_index 
+        #     points_x = (terrainGrid[index[0]][index[1]].single_point((_x,_y)), 
+        #                 terrainGrid[index[0]][nextmod].single_point((_x - lastX, _y - lastY))
+        #                 )
+        #     blendedPoint = BlendDivider.blended_point(blend_wall_x[x_div_index], blend_wall_x[nextdiv], points_x, 'cubic', diffX)
+        #     blendedPoints.append(blendedPoint)
 
-        if blend_wall_y[0] != None:
-            lastX, lastY = int(blend_wall_x[-1].position), int(blend_wall_y[-1].position)
-            nextmod = index[0] + 1 if index[0] < bDZ - 1 else index[0]
-            nextdiv = y_div_index + 1 if y_div_index < bDZ - 1 else y_div_index 
-            points_y = (terrainGrid[index[0]][index[1]].single_point((_x,_y)), 
-                        terrainGrid[nextmod][index[1]].single_point((_x - lastX ,_y - lastY))
-                        )
-            blendedPoint = BlendDivider.blended_point(blend_wall_y[y_div_index], blend_wall_y[nextdiv], points_y, 'cubic', diffY)
-            blendedPoints.append(blendedPoint)
+        # if blend_wall_y[0] != None:
+        #     lastX, lastY = int(blend_wall_x[-1].position), int(blend_wall_y[-1].position)
+        #     nextmod = index[0] + 1 if index[0] < bDZ - 1 else index[0]
+        #     nextdiv = y_div_index + 1 if y_div_index < bDZ - 1 else y_div_index 
+        #     points_y = (terrainGrid[index[0]][index[1]].single_point((_x,_y)), 
+        #                 terrainGrid[nextmod][index[1]].single_point((_x - lastX ,_y - lastY))
+        #                 )
+        #     blendedPoint = BlendDivider.blended_point(blend_wall_y[y_div_index], blend_wall_y[nextdiv], points_y, 'cubic', diffY)
+        #     blendedPoints.append(blendedPoint)
+        blend_points(blend_wall_x, blend_wall_y, x_div_index)
+        blend_points(blend_wall_x, blend_wall_y, y_div_index)
             
         blendedPoints = np.array(blendedPoints)
         if len(blendedPoints) != 0:
